@@ -1,0 +1,77 @@
+# Install necessary libraries
+!pip install numpy pandas scikit-learn joblib
+
+# Import libraries
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+# Load dataset
+data = pd.read_csv('aviator_data.csv')
+
+# Preprocess data
+# Fill missing values
+data.fillna(method='ffill', inplace=True)
+
+# Encode categorical variables
+data = pd.get_dummies(data)
+
+# Feature engineering (example: creating new features)
+data['feature_sum'] = data.sum(axis=1)
+data['feature_mean'] = data.mean(axis=1)
+
+# Split data into features and target
+X = data.drop('target', axis=1)
+y = data['target']
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Initialize the model
+model = RandomForestClassifier(random_state=42)
+
+# Hyperparameter tuning using GridSearchCV
+param_grid = {
+    'n_estimators': [100, 200, 300],
+    'max_depth': [None, 10, 20, 30],
+    'min_samples_split': [2, 5, 10],
+    'min_samples_leaf': [1, 2, 4]
+}
+
+grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
+grid_search.fit(X_train, y_train)
+
+# Best model from grid search
+best_model = grid_search.best_estimator_
+
+# Train the best model
+best_model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = best_model.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print(f'Accuracy: {accuracy * 100:.2f}%')
+print(classification_report(y_test, y_pred))
+
+# Save the model
+joblib.dump(best_model, 'aviator_predictor.pkl')
+
+# Load and use the model
+# Load the model
+model = joblib.load('aviator_predictor.pkl')
+
+# Example prediction
+new_data = pd.DataFrame({
+    'feature1': [value1],
+    'feature2': [value2],
+    # Add all necessary features
+    'feature_sum': [sum_value],
+    'feature_mean': [mean_value]
+})
+prediction = model.predict(new_data)
+print(f'Prediction: {prediction}')
